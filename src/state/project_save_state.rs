@@ -1,3 +1,5 @@
+use tuix::Lens;
+
 use rusty_daw_core::{MusicalTime, Seconds};
 
 use crate::backend::timeline::{
@@ -9,8 +11,8 @@ use crate::backend::BackendSaveState;
 /// for a project.
 ///
 /// TODO: Project file format. This will need to be future-proof.
-#[derive(Debug, Clone)]
-pub struct ProjectSaveState {
+#[derive(Debug, Clone, Lens)]
+pub struct  ProjectSaveState {
     pub backend: BackendSaveState,
     pub timeline_tracks: Vec<TimelineTrackSaveState>,
 }

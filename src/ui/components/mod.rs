@@ -1,8 +1,11 @@
 // pub mod levels;
 // pub use levels::*;
 
-pub mod header;
+mod header;
 pub use header::*;
 
-pub mod control_bars;
+mod control_bars;
 pub use control_bars::*;
+
+mod timeline;
+pub use timeline::*; 

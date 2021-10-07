@@ -32,7 +32,6 @@ impl Widget for Track {
     type Data = TimelineTrackSaveState;
     fn on_build(&mut self, state: &mut State, entity: Entity) -> Self::Ret {
         entity
-            .set_background_color(state, Color::rgb(150, 100, 190))
             .set_height(state, Pixels(80.0))
             //.set_width(state, Pixels(1000.0))
             //.set_text(state, &self.name)
@@ -92,7 +91,6 @@ impl Widget for TrackControls {
 
         Textbox::new(&self.name).build(state, col, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
                 .set_child_space(Stretch(1.0))
         });
 
@@ -103,7 +101,7 @@ impl Widget for TrackControls {
         });
 
         Element::new().build(state, col, |builder| {
-            builder.set_background_color(Color::rgb(57, 52, 54))
+            builder.set_background_color(Color::rgb(48, 44, 47))
         });
 
         let buttons = Element::new().build(state, entity, |builder| {
@@ -118,7 +116,8 @@ impl Widget for TrackControls {
 
         Element::new().build(state, buttons, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
+                .set_background_color(Color::rgb(48, 44, 47))
+                .set_color(Color::rgb(228, 226, 228))
                 .set_border_radius(Pixels(3.0))
                 .set_child_space(Stretch(1.0))
                 .set_row_index(0)
@@ -128,7 +127,8 @@ impl Widget for TrackControls {
 
         Element::new().build(state, buttons, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
+                .set_background_color(Color::rgb(48, 44, 47))
+                .set_color(Color::rgb(228, 226, 228))
                 .set_border_radius(Pixels(3.0))
                 .set_child_space(Stretch(1.0))
                 .set_row_index(0)
@@ -138,7 +138,8 @@ impl Widget for TrackControls {
 
         Element::new().build(state, buttons, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
+                .set_background_color(Color::rgb(48, 44, 47))
+                .set_color(Color::rgb(228, 226, 228))
                 .set_border_radius(Pixels(3.0))
                 .set_child_space(Stretch(1.0))
                 .set_row_index(0)
@@ -171,7 +172,8 @@ impl Widget for TrackControls {
 
         Element::new().build(state, buttons, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
+                .set_background_color(Color::rgb(48, 44, 47))
+                .set_color(Color::rgb(228, 226, 228))
                 .set_border_radius(Pixels(3.0))
                 .set_child_space(Stretch(1.0))
                 .set_row_index(1)
@@ -181,7 +183,8 @@ impl Widget for TrackControls {
 
         Element::new().build(state, buttons, |builder| {
             builder
-                .set_background_color(Color::rgb(57, 52, 54))
+                .set_background_color(Color::rgb(48, 44, 47))
+                .set_color(Color::rgb(228, 226, 228))
                 .set_border_radius(Pixels(3.0))
                 .set_child_space(Stretch(1.0))
                 .set_row_index(1)
@@ -194,7 +197,7 @@ impl Widget for TrackControls {
 
         entity
             .set_layout_type(state, LayoutType::Row)
-            .set_background_color(state, Color::rgb(136, 127, 130))
+            .set_background_color(state, Color::rgb(150, 141, 144))
             .set_height(state, Pixels(80.0))
             .set_width(state, Stretch(1.0))
     }

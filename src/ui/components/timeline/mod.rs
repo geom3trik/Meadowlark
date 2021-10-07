@@ -91,14 +91,12 @@ impl Widget for Timeline {
         let scroll_data = ScrollState::default().build(state, entity);
 
         scroll_data
-            .set_background_color(state, Color::rgb(64, 59, 59))
             .set_layout_type(state, LayoutType::Grid)
             .set_grid_cols(state, vec![Pixels(250.0), Stretch(1.0), Pixels(10.0)])
             .set_grid_rows(state, vec![Stretch(1.0), Pixels(10.0)]);
 
         Element::new().build(state, scroll_data, |builder| {
             builder
-                .set_background_color(Color::rgb(43, 39, 40))
                 .set_row_index(1)
                 .set_col_index(2)
                 .set_row_span(1)
@@ -113,6 +111,7 @@ impl Widget for Timeline {
             .bind(ScrollState::vertical, |scroll| *scroll)
             .build(state, scroll_data, |builder| {
                 builder
+                    .set_background_color(Color::rgb(42, 37, 39))
                     .set_col_index(0)
                     .set_row_index(0)
                     .set_col_span(1)

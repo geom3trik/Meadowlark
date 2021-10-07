@@ -22,7 +22,7 @@ impl Widget for LevelsMeter {
         let front = Element::new().build(state, entity, |builder| {
             builder
                 .set_height(Percentage(0.0))
-                .set_background_color(Color::green())
+                .set_background_color(Color::rgb(0, 240, 77))
         });
 
         entity

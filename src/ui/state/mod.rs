@@ -2,11 +2,10 @@ use crossbeam::channel::Receiver;
 use dropseed::plugin::PluginSaveState;
 use dropseed::plugin::{HostInfo, ParamID, PluginInstanceID};
 use dropseed::{
-    transport::TransportHandle, ActivateEngineSettings, ActivatePluginError, DSEngineEvent,
-    DSEngineHandle, DSEngineRequest, EdgeReq, EdgeReqPortID, EngineActivatedInfo,
-    EngineDeactivatedInfo, ModifyGraphRequest, ModifyGraphRes, ParamModifiedInfo,
-    PluginActivationStatus, PluginEvent, PluginHandle, PluginIDReq, PluginScannerEvent, PortType,
-    RescanPluginDirectoriesRes,
+    ActivateEngineSettings, ActivatePluginError, DSEngineEvent, DSEngineHandle, DSEngineRequest,
+    EdgeReq, EdgeReqPortID, EngineActivatedInfo, EngineDeactivatedInfo, ModifyGraphRequest,
+    ModifyGraphRes, ParamModifiedInfo, PluginActivationStatus, PluginEvent, PluginHandle,
+    PluginIDReq, PluginScannerEvent, PortType, RescanPluginDirectoriesRes, TransportHandle,
 };
 
 use fnv::FnvHashMap;
@@ -191,7 +190,7 @@ impl UiData {
                     name: String::from("Drum Group 1"),
                     channel: 1,
                     timeline_start: ClipStart::NotInTimeline,
-                    length: MusicalTime::from_beats(4).into(),
+                    //length: MusicalTime::from_beats(4).into(),
                     type_: ClipType::Automation(AutomationClipState {}),
                 }],
                 timeline_grid: TimelineGridState {

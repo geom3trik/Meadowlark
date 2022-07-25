@@ -1,4 +1,5 @@
 use basedrop::{Owned, Shared};
+use dropseed::plugin::event::{CoreEventSpace, TransportEvent, TransportEventFlags};
 use dropseed::plugin::HostRequestChannelSender;
 use dropseed::plugin::{
     buffer::EventBuffer, ext, HostInfo, PluginActivatedInfo, PluginAudioThread, PluginDescriptor,
@@ -41,7 +42,7 @@ struct AudioClipProcState {
     fade_in_end_frame: Frames,
     fade_out_start_frame: Frames,
 
-    clip_start_offset_frames: Frames,
+    clip_start_offset_frames: isize,
     clip_start_offset_sub_frame: f64,
 
     pcm: Shared<PcmRAM>,
@@ -91,7 +92,7 @@ impl AudioClipProcState {
             timeline_end_frame,
             fade_in_end_frame,
             fade_out_start_frame,
-            clip_start_offset_frames,
+            clip_start_offset_frames: clip_start_offset_frames.0 as isize,
             clip_start_offset_sub_frame,
             pcm,
         }
@@ -274,7 +275,7 @@ impl PluginMainThread for TimelineTrackPlugMainThread {
         let (proc_tx, handle_rx) = RingBuffer::<HandleToProcMsg>::new(MSG_BUFFER_SIZE);
 
         Ok(PluginActivatedInfo {
-            audio_thread: Box::new(TimelineTrackPlugAudioThread::new(handle_rx, coll_handle)),
+            audio_thread: Box::new(TimelineTrackPlugAudioThread::new(handle_rx, max_frames as usize, coll_handle)),
             internal_handle: Some(Box::new(TimelineTrackPlugHandle::new(
                 proc_tx,
                 coll_handle.clone(),
@@ -290,11 +291,19 @@ impl PluginMainThread for TimelineTrackPlugMainThread {
 pub struct TimelineTrackPlugAudioThread {
     audio_clips: Owned<FnvHashMap<TimelineTrackAudioClipID, AudioClipProcState>>,
     handle_rx: Consumer<HandleToProcMsg>,
+
+    pcm_buf_l: Owned<Vec<f32>>,
+    pcm_buf_r: Owned<Vec<f32>>,
 }
 
 impl TimelineTrackPlugAudioThread {
-    fn new(handle_rx: Consumer<HandleToProcMsg>, coll_handle: &basedrop::Handle) -> Self {
-        Self { audio_clips: Owned::new(coll_handle, FnvHashMap::default()), handle_rx }
+    fn new(handle_rx: Consumer<HandleToProcMsg>, max_frames: usize, coll_handle: &basedrop::Handle) -> Self {
+        Self {
+            audio_clips: Owned::new(coll_handle, FnvHashMap::default()),
+            handle_rx,
+            pcm_buf_l: Owned::new(coll_handle, vec![0.0; max_frames]),
+            pcm_buf_r: Owned::new(coll_handle, vec![0.0; max_frames]),
+        }
     }
 }
 
@@ -336,8 +345,80 @@ impl PluginAudioThread for TimelineTrackPlugAudioThread {
             return ProcessStatus::Continue;
         }
 
-        for audio_clip in self.audio_clips.values() {
+        /*
+        #[derive(Clone)]
+struct AudioClipProcState {
+    id: TimelineTrackAudioClipID,
+
+    timeline_start: MusicalTime,
+    length: Seconds,
+    fade_in_secs: Seconds,
+    fade_out_secs: Seconds,
+    clip_start_offset: SuperFrames,
+
+    timeline_start_frame: Frames,
+    timeline_end_frame: Frames,
+
+    fade_in_end_frame: Frames,
+    fade_out_start_frame: Frames,
+
+    clip_start_offset_frames: Frames,
+    clip_start_offset_sub_frame: f64,
+
+    pcm: Shared<PcmRAM>,
+} */
+
+        let declick_info = proc_info.transport.declick_info().unwrap();
+
+        if !(proc_info.transport.is_playing() || declick_info.start_stop_active || declick_info.jump_active) {
+            // Transport is stopped, and declicking is not running.
+            buffers.clear_all_outputs(proc_info);
+            return ProcessStatus::Continue;
+        }
+
+        let TimelineTrackPlugAudioThread {
+            audio_clips,
+            pcm_buf_l,
+            pcm_buf_r,
+            ..
+        } = self;
+
+        let pcm_buf_l = &mut pcm_buf_l[0..proc_info.frames];
+        let pcm_buf_r = &mut pcm_buf_r[0..proc_info.frames];
+
+        let (mut out_buf_l, mut out_buf_r) = buffers.audio_out[0].stereo_f32_mut().unwrap();
+        let out_buf_l = &mut out_buf_l[0..proc_info.frames];
+        let out_buf_r = &mut out_buf_r[0..proc_info.frames];
+
+        out_buf_l.fill(0.0);
+        out_buf_r.fill(0.0);
+
+        let declick_buffers = declick_info.buffers();
+        let start_stop_declick_buf = &declick_buffers.start_stop_buf[0..proc_info.frames];
+
+        if declick_info.jump_active {
             // TODO
+        }
+
+        for audio_clip in audio_clips.values() {
+            if proc_info.transport.is_range_active(audio_clip.timeline_start_frame, audio_clip.timeline_end_frame) {
+                // TODO: Factor in clip_start_offset_sub_frame?
+                let pcm_frame = (proc_info.transport.playhead_frame().0 as isize - audio_clip.timeline_start_frame.0 as isize) + audio_clip.clip_start_offset_frames;
+
+                audio_clip.pcm.fill_stereo_f32(pcm_frame, pcm_buf_l, pcm_buf_r);
+
+                if declick_info.start_stop_active {
+                    for i in 0..proc_info.frames {
+                        out_buf_l[i] += pcm_buf_l[i] * start_stop_declick_buf[i];
+                        out_buf_r[i] += pcm_buf_r[i] * start_stop_declick_buf[i];
+                    }
+                } else {
+                    for i in 0..proc_info.frames {
+                        out_buf_l[i] += pcm_buf_l[i];
+                        out_buf_r[i] += pcm_buf_r[i];
+                    }
+                }
+            }
         }
 
         ProcessStatus::Continue

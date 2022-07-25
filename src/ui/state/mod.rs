@@ -1,6 +1,7 @@
 use crossbeam::channel::Receiver;
 use dropseed::plugin::PluginSaveState;
 use dropseed::plugin::{HostInfo, ParamID, PluginInstanceID};
+use dropseed::transport::DEFAULT_DECLICK_TIME;
 use dropseed::{
     ActivateEngineSettings, ActivatePluginError, DSEngineEvent, DSEngineHandle, DSEngineRequest,
     EdgeReq, EdgeReqPortID, EngineActivatedInfo, EngineDeactivatedInfo, ModifyGraphRequest,
@@ -270,6 +271,7 @@ impl UiData {
                 max_frames: MAX_FRAMES,
                 num_audio_in_channels: GRAPH_IN_CHANNELS,
                 num_audio_out_channels: GRAPH_OUT_CHANNELS,
+                transport_declick_time: Some(DEFAULT_DECLICK_TIME),
                 ..ActivateEngineSettings::default()
             })));
 

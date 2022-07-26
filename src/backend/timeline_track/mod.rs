@@ -1,5 +1,5 @@
 use basedrop::{Owned, Shared};
-use dropseed::plugin::event::{CoreEventSpace, TransportEvent, TransportEventFlags};
+//use dropseed::plugin::event::{CoreEventSpace, TransportEvent, TransportEventFlags};
 use dropseed::plugin::HostRequestChannelSender;
 use dropseed::plugin::{
     buffer::EventBuffer, ext, HostInfo, PluginActivatedInfo, PluginAudioThread, PluginDescriptor,
@@ -42,7 +42,7 @@ struct AudioClipProcState {
     fade_in_end_frame: Frames,
     fade_out_start_frame: Frames,
 
-    clip_start_offset_frames: isize,
+    clip_start_offset_frames: Frames,
     clip_start_offset_sub_frame: f64,
 
     pcm: Shared<PcmRAM>,
@@ -92,7 +92,7 @@ impl AudioClipProcState {
             timeline_end_frame,
             fade_in_end_frame,
             fade_out_start_frame,
-            clip_start_offset_frames: clip_start_offset_frames.0 as isize,
+            clip_start_offset_frames,
             clip_start_offset_sub_frame,
             pcm,
         }
@@ -275,7 +275,11 @@ impl PluginMainThread for TimelineTrackPlugMainThread {
         let (proc_tx, handle_rx) = RingBuffer::<HandleToProcMsg>::new(MSG_BUFFER_SIZE);
 
         Ok(PluginActivatedInfo {
-            audio_thread: Box::new(TimelineTrackPlugAudioThread::new(handle_rx, max_frames as usize, coll_handle)),
+            audio_thread: Box::new(TimelineTrackPlugAudioThread::new(
+                handle_rx,
+                max_frames as usize,
+                coll_handle,
+            )),
             internal_handle: Some(Box::new(TimelineTrackPlugHandle::new(
                 proc_tx,
                 coll_handle.clone(),
@@ -297,7 +301,11 @@ pub struct TimelineTrackPlugAudioThread {
 }
 
 impl TimelineTrackPlugAudioThread {
-    fn new(handle_rx: Consumer<HandleToProcMsg>, max_frames: usize, coll_handle: &basedrop::Handle) -> Self {
+    fn new(
+        handle_rx: Consumer<HandleToProcMsg>,
+        max_frames: usize,
+        coll_handle: &basedrop::Handle,
+    ) -> Self {
         Self {
             audio_clips: Owned::new(coll_handle, FnvHashMap::default()),
             handle_rx,
@@ -345,43 +353,18 @@ impl PluginAudioThread for TimelineTrackPlugAudioThread {
             return ProcessStatus::Continue;
         }
 
-        /*
-        #[derive(Clone)]
-struct AudioClipProcState {
-    id: TimelineTrackAudioClipID,
-
-    timeline_start: MusicalTime,
-    length: Seconds,
-    fade_in_secs: Seconds,
-    fade_out_secs: Seconds,
-    clip_start_offset: SuperFrames,
-
-    timeline_start_frame: Frames,
-    timeline_end_frame: Frames,
-
-    fade_in_end_frame: Frames,
-    fade_out_start_frame: Frames,
-
-    clip_start_offset_frames: Frames,
-    clip_start_offset_sub_frame: f64,
-
-    pcm: Shared<PcmRAM>,
-} */
-
         let declick_info = proc_info.transport.declick_info().unwrap();
 
-        if !(proc_info.transport.is_playing() || declick_info.start_stop_active || declick_info.jump_active) {
+        if !(proc_info.transport.is_playing()
+            || declick_info.start_stop_active
+            || declick_info.jump_active)
+        {
             // Transport is stopped, and declicking is not running.
             buffers.clear_all_outputs(proc_info);
             return ProcessStatus::Continue;
         }
 
-        let TimelineTrackPlugAudioThread {
-            audio_clips,
-            pcm_buf_l,
-            pcm_buf_r,
-            ..
-        } = self;
+        let TimelineTrackPlugAudioThread { audio_clips, pcm_buf_l, pcm_buf_r, .. } = self;
 
         let pcm_buf_l = &mut pcm_buf_l[0..proc_info.frames];
         let pcm_buf_r = &mut pcm_buf_r[0..proc_info.frames];
@@ -389,7 +372,6 @@ struct AudioClipProcState {
         let (mut out_buf_l, mut out_buf_r) = buffers.audio_out[0].stereo_f32_mut().unwrap();
         let out_buf_l = &mut out_buf_l[0..proc_info.frames];
         let out_buf_r = &mut out_buf_r[0..proc_info.frames];
-
         out_buf_l.fill(0.0);
         out_buf_r.fill(0.0);
 
@@ -397,25 +379,121 @@ struct AudioClipProcState {
         let start_stop_declick_buf = &declick_buffers.start_stop_buf[0..proc_info.frames];
 
         if declick_info.jump_active {
-            // TODO
-        }
+            let declick_out_buf = &declick_buffers.jump_out_buf[0..proc_info.frames];
+            let declick_in_buf = &declick_buffers.jump_in_buf[0..proc_info.frames];
 
-        for audio_clip in audio_clips.values() {
-            if proc_info.transport.is_range_active(audio_clip.timeline_start_frame, audio_clip.timeline_end_frame) {
-                // TODO: Factor in clip_start_offset_sub_frame?
-                let pcm_frame = (proc_info.transport.playhead_frame().0 as isize - audio_clip.timeline_start_frame.0 as isize) + audio_clip.clip_start_offset_frames;
+            for audio_clip in audio_clips.values() {
+                // Declick the samples at the end of the loop.
+                let out_end_frame = declick_info.jump_out_playhead + proc_info.frames.into();
+                if declick_info.jump_out_playhead < audio_clip.timeline_end_frame
+                    && audio_clip.timeline_start_frame < out_end_frame
+                {
+                    // TODO: Factor in clip_start_offset_sub_frame?
+                    let pcm_frame = (declick_info.jump_out_playhead.0 as i64
+                        - audio_clip.timeline_start_frame.0 as i64
+                        + audio_clip.clip_start_offset_frames.0 as i64)
+                        as isize;
 
-                audio_clip.pcm.fill_stereo_f32(pcm_frame, pcm_buf_l, pcm_buf_r);
+                    audio_clip.pcm.fill_stereo_f32(pcm_frame, pcm_buf_l, pcm_buf_r);
 
-                if declick_info.start_stop_active {
-                    for i in 0..proc_info.frames {
-                        out_buf_l[i] += pcm_buf_l[i] * start_stop_declick_buf[i];
-                        out_buf_r[i] += pcm_buf_r[i] * start_stop_declick_buf[i];
+                    if declick_info.start_stop_active {
+                        if proc_info.transport.is_playing()
+                            && declick_info.start_declick_start <= audio_clip.timeline_start_frame
+                        {
+                            // If the audio clip happens to land on or after where the transport started, then
+                            // no transport-start declicking needs to occur. This is important to preserve
+                            // transients when starting the transport at the beginning of an audio clip.
+
+                            for i in 0..proc_info.frames {
+                                out_buf_l[i] += pcm_buf_l[i] * declick_out_buf[i];
+                                out_buf_r[i] += pcm_buf_r[i] * declick_out_buf[i];
+                            }
+                        } else {
+                            for i in 0..proc_info.frames {
+                                out_buf_l[i] +=
+                                    pcm_buf_l[i] * start_stop_declick_buf[i] * declick_out_buf[i];
+                                out_buf_r[i] +=
+                                    pcm_buf_r[i] * start_stop_declick_buf[i] * declick_out_buf[i];
+                            }
+                        }
+                    } else {
+                        for i in 0..proc_info.frames {
+                            out_buf_l[i] += pcm_buf_l[i] * declick_out_buf[i];
+                            out_buf_r[i] += pcm_buf_r[i] * declick_out_buf[i];
+                        }
                     }
-                } else {
-                    for i in 0..proc_info.frames {
-                        out_buf_l[i] += pcm_buf_l[i];
-                        out_buf_r[i] += pcm_buf_r[i];
+                }
+
+                // Declick the samples at the beginning of the loop.
+                let in_end_frame = declick_info.jump_in_playhead + proc_info.frames as i64;
+                if declick_info.jump_in_playhead < (audio_clip.timeline_end_frame.0 as i64)
+                    && (audio_clip.timeline_start_frame.0 as i64) < in_end_frame
+                {
+                    // TODO: Factor in clip_start_offset_sub_frame?
+                    let pcm_frame = (declick_info.jump_in_playhead
+                        - audio_clip.timeline_start_frame.0 as i64
+                        + audio_clip.clip_start_offset_frames.0 as i64)
+                        as isize;
+
+                    audio_clip.pcm.fill_stereo_f32(pcm_frame, pcm_buf_l, pcm_buf_r);
+
+                    if declick_info.jump_in_declick_start
+                        <= audio_clip.timeline_start_frame.0 as i64
+                    {
+                        // If the audio clip happens to land on or after where the transport looped back
+                        // to, then no loop-in declicking needs to occur. This is important to preserve
+                        // transients when looping back to clips that are aligned to the start of the
+                        // loop.
+
+                        for i in 0..proc_info.frames {
+                            out_buf_l[i] += pcm_buf_l[i];
+                            out_buf_r[i] += pcm_buf_r[i];
+                        }
+                    } else {
+                        for i in 0..proc_info.frames {
+                            out_buf_l[i] += pcm_buf_l[i] * declick_in_buf[i];
+                            out_buf_r[i] += pcm_buf_r[i] * declick_in_buf[i];
+                        }
+                    }
+                }
+            }
+        } else {
+            for audio_clip in audio_clips.values() {
+                if proc_info
+                    .transport
+                    .is_range_active(audio_clip.timeline_start_frame, audio_clip.timeline_end_frame)
+                {
+                    // TODO: Factor in clip_start_offset_sub_frame?
+                    let pcm_frame = (proc_info.transport.playhead_frame().0 as i64
+                        - audio_clip.timeline_start_frame.0 as i64
+                        + audio_clip.clip_start_offset_frames.0 as i64)
+                        as isize;
+
+                    audio_clip.pcm.fill_stereo_f32(pcm_frame, pcm_buf_l, pcm_buf_r);
+
+                    if declick_info.start_stop_active {
+                        if proc_info.transport.is_playing()
+                            && declick_info.start_declick_start <= audio_clip.timeline_start_frame
+                        {
+                            // If the audio clip happens to land on or after where the transport started, then
+                            // no transport-start declicking needs to occur. This is important to preserve
+                            // transients when starting the transport at the beginning of an audio clip.
+
+                            for i in 0..proc_info.frames {
+                                out_buf_l[i] += pcm_buf_l[i];
+                                out_buf_r[i] += pcm_buf_r[i];
+                            }
+                        } else {
+                            for i in 0..proc_info.frames {
+                                out_buf_l[i] += pcm_buf_l[i] * start_stop_declick_buf[i];
+                                out_buf_r[i] += pcm_buf_r[i] * start_stop_declick_buf[i];
+                            }
+                        }
+                    } else {
+                        for i in 0..proc_info.frames {
+                            out_buf_l[i] += pcm_buf_l[i];
+                            out_buf_r[i] += pcm_buf_r[i];
+                        }
                     }
                 }
             }

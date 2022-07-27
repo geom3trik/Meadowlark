@@ -1,7 +1,8 @@
 use crossbeam::channel::Receiver;
 use dropseed::plugin::PluginSaveState;
 use dropseed::plugin::{HostInfo, ParamID, PluginInstanceID};
-//use dropseed::transport::DEFAULT_DECLICK_TIME;
+use dropseed::plugin_scanner::ScannedPluginKey;
+use dropseed::transport::{LoopState, TempoMap, DEFAULT_DECLICK_TIME};
 use dropseed::{
     ActivateEngineSettings, ActivatePluginError, DSEngineEvent, DSEngineHandle, DSEngineRequest,
     EdgeReq, EdgeReqPortID, EngineActivatedInfo, EngineDeactivatedInfo, ModifyGraphRequest,
@@ -10,7 +11,7 @@ use dropseed::{
 };
 
 use fnv::FnvHashMap;
-use meadowlark_core_types::time::{MusicalTime, SampleRate};
+use meadowlark_core_types::time::{MusicalTime, SampleRate, Seconds, SuperFrames};
 use pcm_loader::ResampleQuality;
 use smallvec::SmallVec;
 use std::error::Error;
@@ -22,6 +23,9 @@ use crate::backend::sample_browser_plug::{
     SampleBrowserPlugFactory, SampleBrowserPlugHandle, SAMPLE_BROWSER_PLUG_RDN,
 };
 use crate::backend::system_io::{self, SystemIOStreamHandle};
+use crate::backend::timeline_track::{
+    TimelineTrackPlugFactory, TimelineTrackPlugHandle, TIMELINE_TRACK_PLUG_RDN,
+};
 
 mod browser;
 mod channel;
@@ -54,6 +58,8 @@ pub struct EngineHandles {
 
     activated_info: Option<ActivatedEngineInfo>,
     sample_browser_plug_handle: Option<PluginHandle>,
+
+    timeline_track_plug_handles: Vec<PluginHandle>,
 }
 
 pub struct ActivatedEngineInfo {
@@ -65,7 +71,11 @@ pub struct ActivatedEngineInfo {
     /// plugins to system outputs.
     pub graph_out_node_id: PluginInstanceID,
 
+    pub sample_browser_plug_key: ScannedPluginKey,
+    pub timeline_track_plug_key: ScannedPluginKey,
+
     pub transport_handle: TransportHandle,
+    pub tempo_map: TempoMap,
 
     pub sample_rate: SampleRate,
     pub min_frames: u32,
@@ -258,7 +268,7 @@ impl UiData {
                     None,
                     None,
                 ),
-                vec![Box::new(SampleBrowserPlugFactory)],
+                vec![Box::new(SampleBrowserPlugFactory), Box::new(TimelineTrackPlugFactory)],
             );
 
             log::debug!("{:?}", &engine_handle.internal_plugins_res);
@@ -271,7 +281,7 @@ impl UiData {
                 max_frames: MAX_FRAMES,
                 num_audio_in_channels: GRAPH_IN_CHANNELS,
                 num_audio_out_channels: GRAPH_OUT_CHANNELS,
-                //transport_declick_time: Some(DEFAULT_DECLICK_TIME),
+                transport_declick_time: Some(DEFAULT_DECLICK_TIME),
                 ..ActivateEngineSettings::default()
             })));
 
@@ -282,6 +292,7 @@ impl UiData {
                     ds_handle: engine_handle,
                     activated_info: None,
                     sample_browser_plug_handle: None,
+                    timeline_track_plug_handles: Vec::new(),
                 },
                 engine_rx,
             ));
@@ -307,7 +318,7 @@ impl UiData {
                     }
                     // TODO: Hint to the compiler that this is the next most likely event?
                     DSEngineEvent::AudioGraphModified(event) => {
-                        state.on_audio_graph_modified(event, engine_handles);
+                        state.on_audio_graph_modified(event, engine_handles, resource_loader);
                     }
                     DSEngineEvent::Plugin(PluginEvent::Activated {
                         plugin_id,
@@ -481,6 +492,7 @@ impl UiState {
     ) {
         engine_handles.activated_info = None;
         engine_handles.sample_browser_plug_handle = None;
+        engine_handles.timeline_track_plug_handles.clear();
 
         if let Some(system_io_stream_handle) = system_io_stream_handle.as_mut() {
             system_io_stream_handle.engine_deactivated();
@@ -496,34 +508,74 @@ impl UiState {
         engine_handles: &mut EngineHandles,
         system_io_stream_handle: &mut Option<SystemIOStreamHandle>,
     ) {
+        // Collect the keys for the internal plugins.
+        let mut sample_browser_plug_key = None;
+        let mut timeline_track_plug_key = None;
+        for p in engine_handles.ds_handle.internal_plugins_res.iter() {
+            if let Ok(key) = p {
+                if &key.rdn == SAMPLE_BROWSER_PLUG_RDN {
+                    sample_browser_plug_key = Some(key.clone());
+                } else if &key.rdn == TIMELINE_TRACK_PLUG_RDN {
+                    timeline_track_plug_key = Some(key.clone());
+                }
+            }
+        }
+        let sample_browser_plug_key = sample_browser_plug_key.unwrap();
+        let timeline_track_plug_key = timeline_track_plug_key.unwrap();
+
+        system_io_stream_handle.as_mut().unwrap().engine_activated(event.audio_thread);
+
         engine_handles.activated_info = Some(ActivatedEngineInfo {
             graph_in_node_id: event.graph_in_node_id.clone(),
             graph_out_node_id: event.graph_out_node_id.clone(),
+            sample_browser_plug_key: sample_browser_plug_key.clone(),
+            timeline_track_plug_key: timeline_track_plug_key.clone(),
             transport_handle: event.transport_handle,
             sample_rate: event.sample_rate,
             min_frames: event.min_frames,
             max_frames: event.max_frames,
             num_audio_in_channels: event.num_audio_in_channels,
             num_audio_out_channels: event.num_audio_out_channels,
+            tempo_map: event.tempo_map,
         });
-
-        // Collect the keys for the internal plugins.
-        let mut sample_browser_plug_key = None;
-        for p in engine_handles.ds_handle.internal_plugins_res.iter() {
-            if let Ok(key) = p {
-                if &key.rdn == SAMPLE_BROWSER_PLUG_RDN {
-                    sample_browser_plug_key = Some(key.clone());
-                }
-            }
-        }
-        let sample_browser_plug_key = sample_browser_plug_key.unwrap();
-
-        system_io_stream_handle.as_mut().unwrap().engine_activated(event.audio_thread);
 
         // Add the sample-browser plugin and connect it directly to the output.
         engine_handles.ds_handle.send(DSEngineRequest::ModifyGraph(ModifyGraphRequest {
             add_plugin_instances: vec![PluginSaveState::new_with_default_preset(
                 sample_browser_plug_key,
+            )],
+            remove_plugin_instances: vec![],
+            connect_new_edges: vec![
+                EdgeReq {
+                    edge_type: PortType::Audio,
+                    src_plugin_id: PluginIDReq::Added(0),
+                    dst_plugin_id: PluginIDReq::Existing(event.graph_out_node_id.clone()),
+                    src_port_id: EdgeReqPortID::Main,
+                    src_port_channel: 0,
+                    dst_port_id: EdgeReqPortID::Main,
+                    dst_port_channel: 0,
+                    log_error_on_fail: true,
+                },
+                EdgeReq {
+                    edge_type: PortType::Audio,
+                    src_plugin_id: PluginIDReq::Added(0),
+                    dst_plugin_id: PluginIDReq::Existing(event.graph_out_node_id.clone()),
+                    src_port_id: EdgeReqPortID::Main,
+                    src_port_channel: 1,
+                    dst_port_id: EdgeReqPortID::Main,
+                    dst_port_channel: 1,
+                    log_error_on_fail: true,
+                },
+            ],
+            disconnect_edges: vec![],
+        }));
+
+        // --- Temporary TimelineTrackPlug Test ---------------------------------------------
+
+        // Add a test timeline-track plugin and connect it directly to the output.
+        engine_handles.ds_handle.send(DSEngineRequest::ModifyGraph(ModifyGraphRequest {
+            add_plugin_instances: vec![PluginSaveState::new_with_default_preset(
+                timeline_track_plug_key,
             )],
             remove_plugin_instances: vec![],
             connect_new_edges: vec![
@@ -571,6 +623,7 @@ impl UiState {
         &mut self,
         mut event: ModifyGraphRes,
         engine_handles: &mut EngineHandles,
+        resource_loader: &mut ResourceLoader,
     ) {
         for new_plugin in event.new_plugins.drain(..) {
             match new_plugin.status {
@@ -582,9 +635,94 @@ impl UiState {
                     if engine_handles.sample_browser_plug_handle.is_none() {
                         if new_plugin.plugin_id.rdn().as_str() == SAMPLE_BROWSER_PLUG_RDN {
                             engine_handles.sample_browser_plug_handle = Some(new_handle);
+                            return;
                             // TODO: Update state of the gain parameter for this plugin.
                         }
                     }
+
+                    // --- Temporary TimelineTrackPlug Test ---------------------------------------------
+
+                    if new_plugin.plugin_id.rdn().as_str() == TIMELINE_TRACK_PLUG_RDN {
+                        engine_handles.timeline_track_plug_handles.clear();
+                        engine_handles.timeline_track_plug_handles.push(new_handle);
+
+                        let (pcm_kick, res) = resource_loader.load_pcm(&PcmKey {
+                            path: "./assets/test_files/drums/kick.wav".into(),
+                            resample_to_project_sr: true,
+                            resample_quality: Default::default(),
+                        });
+
+                        if let Err(e) = res {
+                            dbg!(e);
+                        } else {
+                            println!("loaded pcm");
+                        }
+
+                        let (pcm_snare, res) = resource_loader.load_pcm(&PcmKey {
+                            path: "./assets/test_files/drums/snare.wav".into(),
+                            resample_to_project_sr: true,
+                            resample_quality: Default::default(),
+                        });
+
+                        if let Err(e) = res {
+                            dbg!(e);
+                        } else {
+                            println!("loaded pcm");
+                        }
+
+                        let tempo_map = &engine_handles.activated_info.as_ref().unwrap().tempo_map;
+
+                        let handle: &mut TimelineTrackPlugHandle = engine_handles
+                            .timeline_track_plug_handles[0]
+                            .internal
+                            .as_mut()
+                            .unwrap()
+                            .downcast_mut()
+                            .unwrap();
+
+                        let kick_clip_id = handle.add_new_audio_clip(
+                            MusicalTime::from_beats(0),
+                            &AudioClipState {
+                                length: Seconds::new(2.0).into(),
+                                fade_in_secs: Seconds::new(0.0).into(),
+                                fade_out_secs: Seconds::new(0.0).into(),
+                                clip_start_offset: SuperFrames::new(0).into(),
+                                pcm: SharedPcmData { pcm: pcm_kick },
+                            },
+                            tempo_map,
+                        );
+
+                        let snare_clip_id = handle.add_new_audio_clip(
+                            MusicalTime::from_beats(1),
+                            &AudioClipState {
+                                length: Seconds::new(2.0).into(),
+                                fade_in_secs: Seconds::new(0.0).into(),
+                                fade_out_secs: Seconds::new(0.0).into(),
+                                clip_start_offset: SuperFrames::new(0).into(),
+                                pcm: SharedPcmData { pcm: pcm_snare },
+                            },
+                            tempo_map,
+                        );
+
+                        engine_handles
+                            .activated_info
+                            .as_mut()
+                            .unwrap()
+                            .transport_handle
+                            .set_loop_state(LoopState::Active {
+                                loop_start: MusicalTime::from_32nd_beats(0, 0),
+                                loop_end: MusicalTime::from_32nd_beats(2, 0),
+                            });
+
+                        engine_handles
+                            .activated_info
+                            .as_mut()
+                            .unwrap()
+                            .transport_handle
+                            .set_playing(true);
+                    }
+
+                    // ----------------------------------------------------------------------------------
 
                     // TODO: Handle other plugins.
                 }

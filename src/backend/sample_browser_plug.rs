@@ -15,7 +15,7 @@ use rtrb::{Consumer, Producer, RingBuffer};
 
 pub static SAMPLE_BROWSER_PLUG_RDN: &str = "app.meadowlark.sample-browser";
 
-static DECLICK_TIME: Seconds = Seconds(30.0 / 1000.0);
+static DECLICK_TIME: Seconds = Seconds(3.0 / 1000.0);
 
 const MSG_BUFFER_SIZE: usize = 64;
 

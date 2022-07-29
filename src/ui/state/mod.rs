@@ -320,6 +320,9 @@ impl UiData {
                     DSEngineEvent::AudioGraphModified(event) => {
                         state.on_audio_graph_modified(event, engine_handles, resource_loader);
                     }
+                    DSEngineEvent::NewSaveStates(save_states) => {
+                        // TODO
+                    }
                     DSEngineEvent::Plugin(PluginEvent::Activated {
                         plugin_id,
                         new_handle,

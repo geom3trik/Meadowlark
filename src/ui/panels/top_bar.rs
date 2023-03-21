@@ -1,7 +1,7 @@
 use vizia::prelude::*;
 
 use crate::state_system::{actions::TimelineAction, AppAction, StateSystem, WorkingState};
-use crate::ui::generic_views::{icon, IconCode};
+use crate::ui::generic_views::{icon, IconCode, ICON_PLAYER_PLAY_FILLED, ICON_PLAYER_PAUSE_FILLED, ICON_REPEAT, ICON_PLAYER_STOP_FILLED, ICON_PLAYER_RECORD_FILLED};
 
 pub fn top_bar(cx: &mut Context) {
     const TOP_BAR_HEIGHT: f32 = 36.0;
@@ -30,11 +30,6 @@ pub fn top_bar(cx: &mut Context) {
                     },
                 );
 
-                Element::new(cx)
-                    .left(Pixels(MENU_SEPARATOR_PADDING))
-                    .right(Pixels(MENU_SEPARATOR_PADDING))
-                    .class("top_bar_separator");
-
                 Menu::new(
                     cx,
                     |cx| Label::new(cx, "Edit").class("menu_bar_label"),
@@ -43,11 +38,6 @@ pub fn top_bar(cx: &mut Context) {
                     },
                 );
 
-                Element::new(cx)
-                    .left(Pixels(MENU_SEPARATOR_PADDING))
-                    .right(Pixels(MENU_SEPARATOR_PADDING))
-                    .class("top_bar_separator");
-
                 Menu::new(
                     cx,
                     |cx| Label::new(cx, "View"),
@@ -55,11 +45,6 @@ pub fn top_bar(cx: &mut Context) {
                         MenuButton::new_simple(cx, "TODO", |_| {});
                     },
                 );
-
-                Element::new(cx)
-                    .left(Pixels(MENU_SEPARATOR_PADDING))
-                    .right(Pixels(MENU_SEPARATOR_PADDING))
-                    .class("top_bar_separator");
 
                 Menu::new(
                     cx,
@@ -112,7 +97,7 @@ pub fn top_bar(cx: &mut Context) {
                             .get(cx),
                     )))
                 },
-                |cx| icon(cx, IconCode::Loop, ICON_FRAME_SIZE, ICON_SIZE),
+                |cx| Label::new(cx, ICON_REPEAT).class("icons"),
             )
             .class("icon_btn")
             .toggle_class(
@@ -125,37 +110,40 @@ pub fn top_bar(cx: &mut Context) {
             Button::new(
                 cx,
                 |cx| cx.emit(AppAction::Timeline(TimelineAction::TransportStop)),
-                |cx| icon(cx, IconCode::Stop, ICON_FRAME_SIZE, ICON_SIZE),
+                |cx| Label::new(cx, ICON_PLAYER_STOP_FILLED).class("icons"),
             )
             .class("icon_btn");
 
             Element::new(cx).class("toolbar_group_separator");
 
-            Binding::new(
+            // Label::new(cx, ICON_PLAYER_PLAY_FILLED).class("icons");
+            // Binding::new(
+            //     cx,
+            //     StateSystem::working_state.then(WorkingState::transport_playing),
+            //     |cx, transport_playing| {
+            //         if transport_playing.get(cx) {
+            Button::new(
                 cx,
-                StateSystem::working_state.then(WorkingState::transport_playing),
-                |cx, transport_playing| {
-                    if transport_playing.get(cx) {
-                        Button::new(
-                            cx,
-                            |cx| cx.emit(AppAction::Timeline(TimelineAction::TransportPause)),
-                            |cx| icon(cx, IconCode::Pause, ICON_FRAME_SIZE, ICON_SIZE),
-                        )
-                        .class("icon_btn");
-                    } else {
-                        Button::new(
-                            cx,
-                            |cx| cx.emit(AppAction::Timeline(TimelineAction::TransportPlay)),
-                            |cx| icon(cx, IconCode::Play, ICON_FRAME_SIZE, ICON_SIZE),
-                        )
-                        .class("icon_btn");
-                    }
-                },
-            );
+                |cx| cx.emit(AppAction::Timeline(TimelineAction::ToggleTransport)),
+                |cx| Label::new(cx, StateSystem::working_state.then(WorkingState::transport_playing).map(|playing| if *playing {ICON_PLAYER_PAUSE_FILLED} else {ICON_PLAYER_PLAY_FILLED}))
+                .class("icons"),
+            )
+            .class("icon_btn")
+            .role(Role::ToggleButton);
+            //         } else {
+            //             Button::new(
+            //                 cx,
+            //                 |cx| cx.emit(AppAction::Timeline(TimelineAction::TransportPlay)),
+            //                 |cx| icon(cx, IconCode::Play, ICON_FRAME_SIZE, ICON_SIZE),
+            //             )
+            //             .class("icon_btn");
+            //         }
+            //     },
+            // );
 
             Element::new(cx).class("toolbar_group_separator");
 
-            Button::new(cx, |_| {}, |cx| icon(cx, IconCode::Record, ICON_FRAME_SIZE, ICON_SIZE))
+            Button::new(cx, |_| {}, |cx| Label::new(cx, ICON_PLAYER_RECORD_FILLED).class("icons"))
                 .class("record_btn");
 
             Element::new(cx).class("toolbar_group_separator");
@@ -167,12 +155,7 @@ pub fn top_bar(cx: &mut Context) {
                 .bottom(Stretch(1.0))
                 .right(Pixels(LABEL_LR_PADDING));
         })
-        .left(Stretch(1.0))
-        .right(Stretch(1.0))
-        .class("toolbar_group")
-        .position_type(PositionType::SelfDirected)
-        .height(Pixels(TOOLBAR_GROUP_HEIGHT))
-        .width(Auto);
+        .class("toolbar_group");
 
         Element::new(cx)
             .right(Pixels(SEPARATOR_PADDING))

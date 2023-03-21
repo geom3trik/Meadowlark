@@ -38,6 +38,16 @@ Buttons
 
 /* Font Classes */
 
+:root {
+    background-color: #171717;
+}
+
+.icons {
+    font-family: "tabler-icons";
+    font-size: 18.0;
+    child-space: 1s;
+}
+
 .monospace_text {
     font-family: "Fira Code";
     font-size: 13pt;
@@ -65,52 +75,6 @@ label {
     font-family: "Inter Medium";
 }
 
-menustack.horizontal {
-    child-left: 3px;
-}
-
-menustack.vertical {
-    background-color: #2c2b2c;
-    min-width: 150px;
-    border-width: 1px;
-    border-color: #3c3b3c;
-    border-radius: 3px;
-    outer-shadow: 0 3 3 #00000055;
-}
-
-menu {
-    child-left: 5px;
-    child-right: 5px;
-    child-top: 4px;
-    child-bottom: 4px;
-    border-radius: 3px;
-}
-
-menubutton {
-    child-space: 5px;
-    border-radius: 3px;
-}
-menu:over {
-    background-color: #4a494a; /* Button Hover */
-}
-menu:over label {
-    color: #f4f4f4; /* Text Level 3 */
-}
-
-menu:selected {
-    background-color: #4a494a; /* Button Hover */
-}
-menu:selected label {
-    color: #f4f4f4; /* Text Level 3 */
-}
-
-menubutton:selected {
-    background-color: #4a494a; /* Button Hover */
-}
-menubutton:selected label {
-    color: #f4f4f4; /* Text Level 3 */
-}
-
 .separator {
     background-color: #0e0e0e; /* Border Level 1 */
     width: 1px;
@@ -123,11 +87,13 @@ menubutton:selected label {
 
 .icon_btn {
     border-radius: 3px;
-    width: auto;
-    height: auto;
+    width: 24px;
+    height: 24px;
 }
 .icon_btn label{
     color: #c6c6c6; /* Text Level 2 */
+    width: 1s;
+    height: 1s;
 }
 .icon_btn:hover {
     background-color: #4a494a; /* Button Hover */
@@ -196,9 +162,13 @@ menubutton:selected label {
 
 .record_btn {
     border-radius: 3px;
+    width: 24px;
+    height: 24px;
 }
 .record_btn label{
     color: #c74d49; /* Record Btn Off */
+    width: 1s;
+    height: 1s;
 }
 .record_btn:hover {
     background-color: #4a494a; /* Button Hover */
@@ -237,22 +207,21 @@ textbox:checked .textbox_content {
 }
 
 .toolbar_group {
-    child-space: 0px;
     height: auto;
+    width: auto;
     background-color: #202020;
     border-width: 1px;
     border-color: #29292a;
     border-radius: 3px;
-    top: 1s;
-    bottom: 1s;
+    col-between: 2px;
+    child-space: 2px;
 }
 
 .toolbar_group_separator {
     background-color: #322f31;
-    border-width: 0px;
     height: 1s;
-    top: 7px;
-    bottom: 7px;
+    top: 4px;
+    bottom: 4px;
     width: 1px;
 }
 
@@ -422,19 +391,6 @@ trackheader .mute_btn label {
 }
 
 /* Panels */
-
-.top_bar {
-    background-color: #2c2c2c;
-    border-width: 1px;
-    border-color: #2d2d2d;
-    border-radius: 0px;
-}
-
-.top_bar_separator {
-    background-color: #272727;
-    height: 1s;
-    width: 1px;
-}
 
 .time_signature_text {
     font-size: 13pt;

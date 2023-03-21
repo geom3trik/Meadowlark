@@ -50,6 +50,7 @@ pub enum TimelineAction {
         scroll_beats_x: f64,
     },
 
+    ToggleTransport,
     TransportPlay,
     TransportPause,
     TransportStop,

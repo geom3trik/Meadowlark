@@ -1,0 +1,58 @@
+.top_bar {
+    background-color: #2c2c2c;
+    border-width: 1px;
+    border-color: #2d2d2d;
+    border-radius: 0px;
+}
+
+.top_bar_separator {
+    background-color: #272727;
+    height: 1s;
+    width: 1px;
+}
+
+menustack.horizontal {
+    child-left: 3px;
+}
+
+menustack.vertical {
+    background-color: #2c2b2c;
+    min-width: 150px;
+    border-width: 1px;
+    border-color: #3c3b3c;
+    border-radius: 3px;
+    outer-shadow: 0 3 3 #00000055;
+}
+
+menu {
+    child-left: 5px;
+    child-right: 5px;
+    child-top: 4px;
+    child-bottom: 4px;
+    border-radius: 3px;
+}
+
+menubutton {
+    child-space: 5px;
+    border-radius: 3px;
+}
+menu:over {
+    background-color: #4a494a; /* Button Hover */
+}
+menu:over label {
+    color: #f4f4f4; /* Text Level 3 */
+}
+
+menu:selected {
+    background-color: #4a494a; /* Button Hover */
+}
+menu:selected label {
+    color: #f4f4f4; /* Text Level 3 */
+}
+
+menubutton:selected {
+    background-color: #4a494a; /* Button Hover */
+}
+menubutton:selected label {
+    color: #f4f4f4; /* Text Level 3 */
+}

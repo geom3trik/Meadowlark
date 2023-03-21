@@ -34,6 +34,23 @@ pub fn handle_timeline_action(
             }
             cx.emit_to(working_state.timeline_view_id.unwrap(), TimelineViewEvent::Navigated);
         }
+        TimelineAction::ToggleTransport => {
+            working_state.transport_playing ^= true;
+
+            if let Some(activated_handles) = &mut engine_handle.activated_handles {
+                activated_handles.engine_info.transport_handle.set_playing(working_state.transport_playing);
+            }
+
+            if let Some(project_state) = &source_state.project {
+                {
+                    working_state.shared_timeline_view_state.borrow_mut().transport_playing ^= true;
+                }
+                cx.emit_to(
+                    working_state.timeline_view_id.unwrap(),
+                    TimelineViewEvent::TransportStateChanged,
+                );
+            }
+        }
         TimelineAction::TransportPlay => {
             working_state.transport_playing = true;
 

@@ -514,7 +514,7 @@ impl View for TimelineView {
         let mut cache = self.renderer_cache.borrow_mut();
         let state = self.shared_state.borrow();
 
-        render_timeline_view(cx, canvas, &mut *cache, &*state, &self.culler, &self.style);
+        // render_timeline_view(cx, canvas, &mut *cache, &*state, &self.culler, &self.style);
     }
 }
 

@@ -2,7 +2,7 @@ use vizia::prelude::*;
 
 pub fn icon<'a>(
     cx: &'a mut Context,
-    icon: impl Res<IconCode>,
+    icon: impl Res<IconCode> + Clone,
     frame_size: f32,
     icon_size: f32,
 ) -> Handle<'a, Label> {
@@ -138,3 +138,10 @@ impl<'s> Res<IconCode> for IconCode {
         (closure)(cx, entity, *self);
     }
 }
+
+
+pub const ICON_PLAYER_PLAY_FILLED: &str = "\u{f691}";
+pub const ICON_PLAYER_PAUSE_FILLED: &str = "\u{f690}";
+pub const ICON_PLAYER_STOP_FILLED: &str = "\u{f695}";
+pub const ICON_PLAYER_RECORD_FILLED: &str = "\u{f692}";
+pub const ICON_REPEAT: &str = "\u{eb72}";

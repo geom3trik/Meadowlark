@@ -21,6 +21,7 @@ const MEADOWLARK_ICON_FONT: &[u8] = include_bytes!("resources/icons/meadowlark-i
 const INTER_MEDIUM: &[u8] = include_bytes!("resources/fonts/Inter-Medium.ttf");
 //const INTER_BOLD: &[u8] = include_bytes!("resources/fonts/Inter-Bold.ttf");
 const FIRA_CODE: &[u8] = include_bytes!("resources/fonts/FiraCode-Regular.ttf");
+const TABLER_ICONS: &[u8] = include_bytes!("resources/fonts/tabler-icons.ttf");
 
 static ENGINE_POLL_TIMER_INTERVAL: Duration = Duration::from_millis(4);
 
@@ -28,15 +29,18 @@ pub fn run_ui() -> Result<(), Box<dyn Error>> {
     let icon = vizia::image::open("src/ui/resources/icons/meadowlark-logo-256.png")?;
     let icon_width = icon.width();
     let icon_height = icon.height();
-
+    
     let run_poll_timer = Arc::new(AtomicBool::new(true));
     let run_poll_timer_clone = Arc::clone(&run_poll_timer);
-
+    
     let app = Application::new(move |cx| {
-        cx.add_fonts_mem(&[INTER_MEDIUM, FIRA_CODE, MEADOWLARK_ICON_FONT]);
+        cx.add_fonts_mem(&[INTER_MEDIUM, FIRA_CODE, MEADOWLARK_ICON_FONT, TABLER_ICONS]);
 
         cx.add_stylesheet("src/ui/resources/themes/default.css")
             .expect("Failed to find default stylesheet");
+
+        cx.add_stylesheet("src/ui/resources/themes/topbar.css")
+            .expect("Failed to find topbar stylesheet");
 
         let shared_timeline_view_state = Rc::new(RefCell::new(TimelineViewState::new()));
 

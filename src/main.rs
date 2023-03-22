@@ -13,7 +13,7 @@ mod ui;
 mod util;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logging()?;
+    // setup_logging()?;
 
     ui::run_ui()
 }

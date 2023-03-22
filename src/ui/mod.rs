@@ -14,6 +14,8 @@ use crate::state_system::working_state::timeline_view_state::TimelineViewState;
 use crate::state_system::{AppAction, StateSystem};
 use crate::ui::panels::{bottom_bar, browser_panel, side_tab_bar, timeline_panel, top_bar};
 
+use self::panels::top_bar::TopBar;
+
 pub mod generic_views;
 pub mod panels;
 
@@ -29,10 +31,10 @@ pub fn run_ui() -> Result<(), Box<dyn Error>> {
     let icon = vizia::image::open("src/ui/resources/icons/meadowlark-logo-256.png")?;
     let icon_width = icon.width();
     let icon_height = icon.height();
-    
+
     let run_poll_timer = Arc::new(AtomicBool::new(true));
     let run_poll_timer_clone = Arc::clone(&run_poll_timer);
-    
+
     let app = Application::new(move |cx| {
         cx.add_fonts_mem(&[INTER_MEDIUM, FIRA_CODE, MEADOWLARK_ICON_FONT, TABLER_ICONS]);
 
@@ -47,18 +49,19 @@ pub fn run_ui() -> Result<(), Box<dyn Error>> {
         StateSystem::new(Rc::clone(&shared_timeline_view_state)).build(cx);
 
         VStack::new(cx, |cx| {
-            top_bar::top_bar(cx);
+            // top_bar::top_bar(cx);
+            TopBar::new(cx);
 
-            HStack::new(cx, |cx| {
-                side_tab_bar::side_tab_bar(cx);
-                browser_panel::browser_panel(cx);
+            // HStack::new(cx, |cx| {
+            //     side_tab_bar::side_tab_bar(cx);
+            //     browser_panel::browser_panel(cx);
 
-                timeline_panel::timeline_panel(cx, shared_timeline_view_state);
-            })
-            .col_between(Pixels(1.0))
-            .width(Stretch(2.0));
+            //     timeline_panel::timeline_panel(cx, shared_timeline_view_state);
+            // })
+            // .col_between(Pixels(1.0))
+            // .width(Stretch(2.0));
 
-            bottom_bar::bottom_bar(cx);
+            // bottom_bar::bottom_bar(cx);
         })
         .background_color(Color::from("#171717"))
         .row_between(Pixels(1.0));

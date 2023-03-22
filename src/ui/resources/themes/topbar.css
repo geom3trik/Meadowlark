@@ -1,58 +1,194 @@
-.top_bar {
-    background-color: #2c2c2c;
-    border-width: 1px;
-    border-color: #2d2d2d;
-    border-radius: 0px;
+:root {
+    color: #c7c7c7;
 }
 
-.top_bar_separator {
-    background-color: #272727;
-    height: 1s;
+/* * {
+    border-color: red;
+    border-width: 1px;
+} */
+
+button:focus-visible {
+    outline-color: red;
+    outline-width: 1px;
+    outline-offset: 5px;
+}
+
+topbar {
+    background-color: #252525;
+    height: 80px;
+    transition: height 0.1 0.0;
+    child-space: 20px;
+    child-top: 1s;
+    child-bottom: 1s;
+    col-between: 20px;
+    col-between: 1s;
+}
+
+topbar > control_group {
+    height: auto;
+    width: auto;
+    row-between: 8px;
+    transition: row-between 0.1 0.0;
+}
+
+topbar > control_group > .title {
+    opacity: 1.0;
+    transition: opacity 0.1 0.1;
+    height: 16px;
+    min-height: 0px;
+}
+
+topbar > control_group > .horizontal_line {
+    height: 1px;
+    width: 1s;
+    background-color: #e8e8e8;
+    opacity: 1.0;
+    transition: opacity 0.1 0.0;
+}
+
+topbar > control_group > .controls {
+    height: auto;
+    width: auto;
+}
+
+topbar.collapsed {
+    height: 50px;
+    transition: height 0.1 0.1;
+}
+
+topbar.collapsed > control_group {
+    row-between: 0px;
+    transition: row-between 0.1 0.1;
+}
+
+topbar.collapsed > control_group > .title {
+    opacity: 0.0;
+    transition: opacity 0.1 0.0;
+    height: 0px;
+    transition: height 0.1 0.1;
+}
+
+topbar.collapsed > control_group > .horizontal_line {
+    opacity: 0.0;
+    transition: opacity 0.1 0.0;
+    height: 0px;
+    transition: height 0.1 0.1;
+}
+
+
+icon {
+    font-family: "tabler-icons";
+    font-size: 20.0;
+    child-space: 1s;
+    width: 24px;
+    height: 24px;
+}
+
+icon:hover {
+    color: white;
+}
+
+.settings {
+    background-color: #2d2d2d;
+    border-color: #181818;
+    border-radius: 4px;
+    border-width: 1px;
+    height: auto;
+    width: auto;
+    child-space: 8px;
+    space: 1s;
+    top: 120%;
+    row-between: 8px;
+    outer-shadow: 0px 2px 5px #00000033;
+}
+
+.settings .row {
+    width: 1s;
+    height: 30px;
+    border-radius: 2px;
+    child-top: 1s;
+    child-bottom: 1s;
+    child-left: 8px;
+    child-right: 8px;
+    col-between: 12px;
+}
+
+.settings .row2 {
+    width: 1s;
+    height: 30px;
+    border-radius: 2px;
+    child-top: 1s;
+    child-bottom: 1s;
+    child-left: 8px;
+    child-right: 8px;
+    col-between: 12px;
+}
+
+.settings .row:over {
+    background-color: #3b3b3b;
+}
+
+.settings .row.selected {
+    background-color: #894a31;
+}
+
+icon.control1 {
+    right: 8px;
+    opacity: 1.0;
+    width: 24px;
+    transition: width 0.2 0.0;
+    transition: right 0.2 0.0;
+    transition: opacity 0.2 0.2;
+}
+
+icon.hidden {
+    width: 0px;
+    min-width: 0px;
+    transition: width 0.1 0.1;
+    opacity: 0.0;
+    transition: opacity 0.1 0.0;
+    right: 0px;
+    transition: right 0.1 0.0;
+}
+
+.vertical_separator {
     width: 1px;
+    height: 1s;
+    background-color: #e8e8e8;
 }
 
-menustack.horizontal {
-    child-left: 3px;
+button {
+    background-color: #4c4c4c;
+    child-space: 1s;
+    child-left: 4px;
+    child-right: 4px;
+    border-radius: 2px;
+    height: 1s;
+    width: auto;
 }
 
-menustack.vertical {
-    background-color: #2c2b2c;
-    min-width: 150px;
+button:hover {
+    background-color: #434343;
+}
+
+button:active {
+    background-color: #595959;
+}
+
+button:disabled {
+    background-color: #363636;
+    color: #444444;
+}
+
+button:disabled label {
+    color: #444444;
+}
+
+checkbox {
+    width: 20px;
+    height: 20px;
     border-width: 1px;
-    border-color: #3c3b3c;
-    border-radius: 3px;
-    outer-shadow: 0 3 3 #00000055;
-}
-
-menu {
-    child-left: 5px;
-    child-right: 5px;
-    child-top: 4px;
-    child-bottom: 4px;
-    border-radius: 3px;
-}
-
-menubutton {
-    child-space: 5px;
-    border-radius: 3px;
-}
-menu:over {
-    background-color: #4a494a; /* Button Hover */
-}
-menu:over label {
-    color: #f4f4f4; /* Text Level 3 */
-}
-
-menu:selected {
-    background-color: #4a494a; /* Button Hover */
-}
-menu:selected label {
-    color: #f4f4f4; /* Text Level 3 */
-}
-
-menubutton:selected {
-    background-color: #4a494a; /* Button Hover */
-}
-menubutton:selected label {
-    color: #f4f4f4; /* Text Level 3 */
+    border-color: #e8e8e8;
+    child-space: 1s;
+    border-radius: 2px;
 }

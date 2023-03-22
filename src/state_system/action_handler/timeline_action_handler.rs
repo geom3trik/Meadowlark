@@ -38,7 +38,10 @@ pub fn handle_timeline_action(
             working_state.transport_playing ^= true;
 
             if let Some(activated_handles) = &mut engine_handle.activated_handles {
-                activated_handles.engine_info.transport_handle.set_playing(working_state.transport_playing);
+                activated_handles
+                    .engine_info
+                    .transport_handle
+                    .set_playing(working_state.transport_playing);
             }
 
             if let Some(project_state) = &source_state.project {

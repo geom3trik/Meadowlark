@@ -139,9 +139,15 @@ impl<'s> Res<IconCode> for IconCode {
     }
 }
 
-
 pub const ICON_PLAYER_PLAY_FILLED: &str = "\u{f691}";
 pub const ICON_PLAYER_PAUSE_FILLED: &str = "\u{f690}";
 pub const ICON_PLAYER_STOP_FILLED: &str = "\u{f695}";
 pub const ICON_PLAYER_RECORD_FILLED: &str = "\u{f692}";
 pub const ICON_REPEAT: &str = "\u{eb72}";
+pub const ICON_SETTINGS_PLUS: &str = "\u{f9b9}";
+pub const ICON_SETTINGS: &str = "\u{eb20}";
+pub const ICON_EYE: &str = "\u{ea9a}";
+pub const ICON_EYE_CLOSED: &str = "\u{f7ec}";
+pub const ICON_TRASH: &str = "\u{eb41}";
+pub const ICON_ARROW_DOWN: &str = "\u{ea16}";
+pub const ICON_ARROW_UP: &str = "\u{ea25}";

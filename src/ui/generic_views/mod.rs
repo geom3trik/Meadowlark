@@ -1,4 +1,4 @@
-mod icon;
+pub mod icon;
 pub mod knob;
 pub mod resizable_stack;
 pub mod virtual_slider;
